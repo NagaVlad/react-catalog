@@ -60,7 +60,7 @@ export default class App extends React.Component {
         //рендерю
 
         //listProd
-        //filter
+
 
 
         const slice = data.slice(this.state.offset, this.state.offset + this.state.perPage)
