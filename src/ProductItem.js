@@ -12,7 +12,12 @@ class ProducItem extends Component {
     func(obj)
   }
   render() {
-    const { pd, innerRef, changeProductItemCheckedStatus } = this.props
+    const {
+      pd,
+      innerRef,
+      changeProductItemCheckedStatus,
+      isChecked,
+    } = this.props
     return (
       <div className='col s3 offset-s1'>
         <div className='card'>
@@ -26,6 +31,7 @@ class ProducItem extends Component {
           <div className='card-action'>
             <label>
               <input
+                checked={isChecked}
                 ref={this.state.ref}
                 type='checkbox'
                 onChange={() => {

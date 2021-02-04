@@ -3,17 +3,11 @@ import Cart from './Cart'
 import Registration from './Registration'
 import './App.css'
 import axios from 'axios'
-import ReactPaginate from 'react-paginate'
 import Search from './Search'
 import ProductFilter from './Filter/ProductFilter'
-// import ProductItem from './ProductItem'
 import About from './About'
 import Main from './Main'
-import { Route, NavLink, Switch, Redirect } from 'react-router-dom'
-
-import Modal from './Modal'
-
-import ProductLayout from './ProductLayout'
+import { Route, NavLink } from 'react-router-dom'
 import HomeLayout from './HomeLayout'
 
 export default class App extends React.Component {
@@ -27,7 +21,6 @@ export default class App extends React.Component {
       total: 0,
       itog: [], //То что в дате
       offset: 0,
-      // data: [],
       perPage: 9,
       currentPage: 0,
       postData: [],
@@ -37,23 +30,18 @@ export default class App extends React.Component {
       searchString: '',
       startArraySearch: [], //Все товары
       modal2: true,
+      data: [],
       //ФИЛЬТР
       series: 0,
       abv: 12,
       checked2: false,
       filtredProduct: [],
-      /////////////////
-      data: [],
       filtredByNameData: [],
     }
-
-    this.handleFormInputFilter = this.handleFormInputFilter.bind(this)
-    this.handleChangeFilter = this.handleChangeFilter.bind(this)
   }
 
   componentDidMount() {
     this.receivedData()
-    this.searching()
   }
 
   handlePageClick = (e) => {
@@ -70,25 +58,22 @@ export default class App extends React.Component {
     )
   }
 
-  async receivedData() {
+  receivedData = async () => {
     let { data } = await axios.get(`https://api.punkapi.com/v2/beers`)
     data = data.map((el) => ({
       ...el,
       isChecked: false,
       ref: React.createRef(),
     }))
-    this.setState(
-      {
-        data,
-        filtredByNameData: data,
-      },
-      () => this.handlerRef()
-    )
+    this.setState({
+      data,
+      filtredByNameData: [...data],
+    })
   }
 
   changeProductItemCheckedStatus = ({ id, isChecked, input }) => {
     // console.log((input.current.checked = isChecked))
-    const productItem = this.state.filtredByNameData.find((el) => el.id === id)
+    const productItem = this.state.data.find((el) => el.id === id)
     // const globalIndex = this.state.filtredByNameData.indexOf(productItem)
     productItem.isChecked = isChecked
     if (isChecked) {
@@ -105,18 +90,9 @@ export default class App extends React.Component {
         cart: [...prevState.cart],
       }),
       () => {
-        input.current.checked = isChecked
+        input.current && (input.current.checked = isChecked)
       }
     )
-  }
-
-  handlerRef() {
-    // const arrayRef = Array.from({
-    //   length: this.state.filtredByNameData.length,
-    // }).map(() => React.createRef())
-    // this.setState({
-    //   arrayRef,
-    // })
   }
 
   counterHandler = () => {
@@ -127,18 +103,8 @@ export default class App extends React.Component {
     })
   }
 
-  deleteHandler2(index) {
-    this.state.cart.splice(index, 1)
-    this.setState(
-      (prevState) => ({ cart: [...prevState.cart] }),
-      this.counterHandler
-    )
-    console.log('Новое', this.state.cart)
-  }
-
   //*ПОИСК
   handleChange = (e) => {
-    console.log('e', e.target.value)
     this.setState(
       {
         searchString: e.target.value,
@@ -147,7 +113,7 @@ export default class App extends React.Component {
     )
   }
 
-  searching() {
+  searching = () => {
     let searchString = this.state.searchString.trim().toLowerCase()
 
     if (searchString.length > 0) {
@@ -160,34 +126,27 @@ export default class App extends React.Component {
           filtredByNameData,
         },
         () => {
-          this.handlerRef()
+          console.log(this.state.data)
         }
       )
     } else {
       this.setState(
         {
-          filtredByNameData: this.state.data,
+          filtredByNameData: [...this.state.data],
         },
-        () => this.handlerRef()
+        () => {
+          console.log(this.state.data)
+        }
       )
     }
   }
 
   //*ФИЛЬТР
-  handleFormInputFilter(abv, series) {
+  handleFormInputFilter = (abv, series) => {
     this.setState({
       series: series,
       abv: abv,
     })
-  }
-
-  handleChangeFilter() {
-    this.setState(
-      (prevState) => ({ checked2: !prevState.checked2 }),
-      () => {
-        console.log(this.state.checked2)
-      }
-    )
   }
 
   render() {
@@ -240,7 +199,6 @@ export default class App extends React.Component {
           render={() => (
             <HomeLayout
               filtredByNameData={this.state.filtredByNameData} //!!ТУТ ЕСТЬ ОШИБКА!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-              addToCart={this.addToCart}
               pageCount={this.state.pageCount}
               changeProductItemCheckedStatus={
                 this.changeProductItemCheckedStatus
@@ -270,7 +228,6 @@ export default class App extends React.Component {
         <ProductFilter
           series={this.state.series}
           abv={this.state.abv}
-          handleChangeFilter={this.handleChangeFilter}
           data={this.state.data}
           checked={this.state.checked}
         />
