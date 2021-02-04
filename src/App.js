@@ -1,222 +1,243 @@
-import React from 'react';
-import Cart from './Cart';
+import React from 'react'
+import Cart from './Cart'
 import Registration from './Registration'
 import './App.css'
 import axios from 'axios'
-import ReactPaginate from 'react-paginate';
 import Search from './Search'
 import ProductFilter from './Filter/ProductFilter'
-import ProductItem from './ProductItem'
+import About from './About'
+import Main from './Main'
+import { Route, NavLink } from 'react-router-dom'
+import HomeLayout from './HomeLayout'
+
 export default class App extends React.Component {
-
-
   constructor(props) {
-    super(props);
+    super(props)
     this.state = {
       modal: false,
       modalReg: false,
       cart: [],
       isEmpty: 'true',
       total: 0,
-      itog: [],
+      itog: [], //То что в дате
       offset: 0,
-      data: [],
-      perPage: 10,
+      perPage: 9,
       currentPage: 0,
       postData: [],
-
+      slice: [], //Пагинация
       checkChecked: [],
-      arrayRef: []
-
+      searchProducts: [], //Найденный продукт
+      searchString: '',
+      startArraySearch: [], //Все товары
+      modal2: true,
+      data: [],
+      //ФИЛЬТР
+      series: 0,
+      abv: 12,
+      checked2: false,
+      filtredProduct: [],
+      filtredByNameData: [],
     }
-
-    this.deleteHandler = this.deleteHandler.bind(this)
-    // this.handlePageClick = this.handlePageClick.bind(this);
-
-  }
-
-
-
-  handlePageClick = (e) => {
-    const selectedPage = e.selected;
-    const offset = selectedPage * this.state.perPage;
-
-    this.setState({
-      currentPage: selectedPage,
-      offset: offset
-    }, () => {
-      this.receivedData()
-    });
-  };
-
-  receivedData() {
-    axios
-      .get(`https://api.punkapi.com/v2/beers`)
-      .then(res => {
-
-        const data = res.data;
-        const slice = data.slice(this.state.offset, this.state.offset + this.state.perPage)
-
-
-        const arrayRef = Array.from({
-          length: slice.length
-        })
-          .map(() => React.createRef())
-
-
-        const postData = slice.map((pd, index) =>
-
-          React.forwardRef((props, ref) => <ProductItem
-            innerRef={this.state.arrayRef[index]}
-            key={index}
-            pd={pd}
-            addCart={this.addCart}
-          />
-          ))
-
-        this.setState({
-          pageCount: Math.ceil(data.length / this.state.perPage),
-          itog: data,
-          postData,
-          arrayRef
-        })
-      })
   }
 
   componentDidMount() {
     this.receivedData()
   }
-  //ДОБАВЛЯЮ В КОРЗИНУ!!!!!!!!!!!!!!
-  addCart = (Name, e, index) => {
-    // console.log('СОСТОЯНИЕ ЧЕКБОКСА', e.target.getAttribute('data'));
-    // console.log('СОСТОЯНИЕ ЧЕКБОКСА', e.target.getAttribute('data'));
-    if (e.target.checked) {
-      // console.log(Name);
-      const Product = this.state.itog.find((elem) => {
-        return elem.name === Name
-      });
 
-      //!!
-      // const x = e.target.getAttribute('data')
-      const { id, name, image_url } = Product;
-      const newArr = [id, name, image_url]
+  handlePageClick = (e) => {
+    const selectedPage = e.selected
+    const offset = selectedPage * this.state.perPage
+    this.setState(
+      {
+        currentPage: selectedPage,
+        offset: offset,
+      },
+      () => {
+        this.receivedData()
+      }
+    )
+  }
 
-      this.setState({
-        cart: this.state.cart.concat([newArr]),
-        isEmpty: 'false'
-      }, this.counterHandler);
+  receivedData = async () => {
+    let { data } = await axios.get(`https://api.punkapi.com/v2/beers`)
+    data = data.map((el) => ({
+      ...el,
+      isChecked: false,
+      ref: React.createRef(),
+    }))
+    this.setState({
+      data,
+      filtredByNameData: [...data],
+    })
+  }
+
+  changeProductItemCheckedStatus = ({ id, isChecked, input }) => {
+    // console.log((input.current.checked = isChecked))
+    const productItem = this.state.data.find((el) => el.id === id)
+    // const globalIndex = this.state.filtredByNameData.indexOf(productItem)
+    productItem.isChecked = isChecked
+    if (isChecked) {
+      this.state.cart.push(productItem)
     } else {
-      console.log('Удаляю');
-      // console.log(this.state.cart.splice(index, 1));
-
-      this.deleteHandler(index[0], e)
-
-
-
-      // this.state.cart.splice(index[0], 1);
-      // this.setState(
-      //   (prevState) => ({ cart: [...prevState.cart] }),
-      //   this.counterHandler
-      // );
+      const index = this.state.cart.indexOf(productItem)
+      if (index > -1) {
+        this.state.cart.splice(index, 1)
+      }
     }
-
+    this.setState(
+      (prevState) => ({
+        filtredByNameData: [...prevState.filtredByNameData],
+        cart: [...prevState.cart],
+      }),
+      () => {
+        input.current && (input.current.checked = isChecked)
+      }
+    )
   }
 
   counterHandler = () => {
-    // console.log('ТОТАЛ', this.state.total)
     this.setState({
-
       total: this.state.cart.reduce((acc, currentValue) => {
-        // console.log('ACC', acc)
-        // console.log('currentValue', currentValue)
         return Number(acc) + Number(currentValue[0])
-      }, 0)
+      }, 0),
     })
-    // }, () => { console.log(this.state.total) })
-
   }
 
-  deleteHandler(index, x) {
-    // console.log('xxxxxxxx', x);
-    // console.log(e);
-    // if (e) {
-    //   e.target.checked = false
-    // }
-
-
-
-
-    // console.log('delete', index);
-    this.state.cart.splice(index, 1)
-
+  //*ПОИСК
+  handleChange = (e) => {
     this.setState(
-      (prevState) => ({ cart: [...prevState.cart] }),
-      // () => { console.log(this.state.total) }
-      this.counterHandler
+      {
+        searchString: e.target.value,
+      },
+      () => this.searching()
     )
-    console.log('Новое', this.state.cart);
   }
 
+  searching = () => {
+    let searchString = this.state.searchString.trim().toLowerCase()
 
-  // getRef = (node) => { this.el = node }
+    if (searchString.length > 0) {
+      let filtredByNameData = this.state.data.filter((el) => {
+        return el.name.toLowerCase().match(searchString)
+      })
+
+      this.setState(
+        {
+          filtredByNameData,
+        },
+        () => {
+          console.log(this.state.data)
+        }
+      )
+    } else {
+      this.setState(
+        {
+          filtredByNameData: [...this.state.data],
+        },
+        () => {
+          console.log(this.state.data)
+        }
+      )
+    }
+  }
+
+  //*ФИЛЬТР
+  handleFormInputFilter = (abv, series) => {
+    this.setState({
+      series: series,
+      abv: abv,
+    })
+  }
 
   render() {
     return (
       <>
-        <h1>Каталог товаров</h1>
-
-        <div className="row">
-          {this.state.postData}
+        <div className='container '>
+          <nav className='navig '>
+            <ul className='navigation'>
+              <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+                <li>
+                  <NavLink to='/'>Каталог товаров</NavLink>
+                </li>
+                <li>
+                  <NavLink to='/about'>О магазине</NavLink>
+                </li>
+                <li>
+                  <NavLink to='/main'>Контакты</NavLink>
+                </li>
+                <li>
+                  <button
+                    className='btn btn green'
+                    onClick={() => {
+                      this.setState({ modal: true })
+                    }}>
+                    Корзина
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className='btn btn blue'
+                    onClick={() => this.setState({ modalReg: true })}>
+                    Регистрация
+                  </button>
+                </li>
+              </div>
+            </ul>
+          </nav>
         </div>
 
-
-        <div className="row">
-          {/* {this.state.itog} */}
-        </div>
-
-        <ReactPaginate
-          previousLabel={"prev"}
-          nextLabel={"next"}
-          breakLabel={"..."}
-          breakClassName={"break-me"}
-          pageCount={this.state.pageCount}
-          marginPagesDisplayed={2}
-          pageRangeDisplayed={5}
-          onPageChange={this.handlePageClick}
-          containerClassName={"pagination"}
-          subContainerClassName={"pages pagination"}
-          activeClassName={"active"} />
-
-        { this.state.modal ? <Cart
-          close={() => this.setState({ modal: false })}
-          cart={this.state.cart}
-          isEmpty={this.state.isEmpty}
-          total={this.state.total}
-          deleteHandler={this.deleteHandler}
-        /> : null}
-
-        { this.state.modalReg ? <Registration close={() => this.setState({ modalReg: false })} /> : null}
-
-        <button className="btn green" onClick={
-          () => { this.setState({ modal: true }) }}>
-          Корзина
-          </button>
-
-        <button className="btn blue" onClick={() => this.setState({ modalReg: true })}>Регистрация</button>
-
-        <hr />
-
-        {/* <div className="container" >
-          <h3>Поиск товара</h3>
-          <Search
-            data={this.state.itog}
-          />
-        </div> */}
-
-        <ProductFilter
-          data={this.state.itog}
+        <h1 style={{ textAlign: 'center' }}>Каталог товаров</h1>
+        <Search
+          handleChange={this.handleChange}
+          searchString={this.state.searchString}
         />
 
+        {/* Router */}
+        <Route
+          path='/'
+          exact
+          render={() => (
+            <HomeLayout
+              filtredByNameData={this.state.filtredByNameData} //!!ТУТ ЕСТЬ ОШИБКА!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+              pageCount={this.state.pageCount}
+              changeProductItemCheckedStatus={
+                this.changeProductItemCheckedStatus
+              }
+
+              // pageCount={this.state.pageCount}
+            />
+          )}
+        />
+        <Route path='/about' exact component={About} />
+        <Route path='/main' exact component={Main} />
+        {/* Корзина */}
+        {this.state.modal ? (
+          <Cart
+            close={() => this.setState({ modal: false })}
+            cart={this.state.cart}
+            changeProductItemCheckedStatus={this.changeProductItemCheckedStatus}
+          />
+        ) : null}
+
+        {/* Форма регистрации */}
+        {this.state.modalReg ? (
+          <Registration close={() => this.setState({ modalReg: false })} />
+        ) : null}
+
+        {/* Фильтр */}
+        <ProductFilter
+          series={this.state.series}
+          abv={this.state.abv}
+          data={this.state.data}
+          checked={this.state.checked}
+        />
+
+        {this.state.checked2 ? this.handleFiltred() : null}
+
+        {/* <Modal
+          modal2={this.state.modal2}
+          setActive={this.setModalActive}
+        /> */}
       </>
     )
   }
